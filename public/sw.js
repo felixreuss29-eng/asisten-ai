@@ -1,7 +1,7 @@
 /* Service Worker — menyimpan shell aplikasi agar bisa dipasang/dipakai offline.
    Permintaan /api/ sengaja TIDAK dicache supaya jawaban selalu dari model. */
 
-const CACHE = "asisten-ai-v1";
+const CACHE = "asisten-ai-v2";
 const SHELL = [
   "./",
   "./index.html",
@@ -27,6 +27,20 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return; // jangan pernah cache API
+
+  // config.js harus selalu segar (isi URL backend bisa berubah saat deploy).
+  if (url.pathname.endsWith("/config.js")) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const salinan = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, salinan));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
 
   if (event.request.mode === "navigate") {
     event.respondWith(
