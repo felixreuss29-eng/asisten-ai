@@ -253,6 +253,8 @@ Vercel Hobby **tidak meminta kartu kredit** dan mendeteksi Express otomatis dari
 > Data di `/tmp` bersifat sementara, jadi tugas/catatan bisa reset saat function di-restart. Untuk uji publik tidak masalah.
 > GitHub Pages tetap bisa dipakai, tapi `public/config.js` perlu diisi URL Vercel supaya AI jalan dari sana.
 
+Persona lengkap (gaya bicara, sikap, sapaan, aturan tool, dan konteks pengguna) ada di `PERSONA_TEMPLATE` pada `server.js` sebagai pesan sistem kedua. Tombol **👤 Profil** di aplikasi menyimpan nama dan aktivitas di localStorage; keduanya dikirim aman ke server untuk mengisi `{nama}` dan `{jurusan_atau_aktivitas}` secara natural.
+
 ### Deploy dengan Render Blueprint (alternatif; perlu verifikasi kartu $1)
 
 Repo sudah berisi `render.yaml`. Di Render:

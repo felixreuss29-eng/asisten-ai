@@ -12,6 +12,7 @@ const KEY_CURRENT = "asisten-ai:current";
 const KEY_SESSIONS = "asisten-ai:sessions";
 const KEY_PREFS = "asisten-ai:prefs";
 const KEY_REMINDERS = "asisten-ai:reminders";
+const KEY_PROFILE = "asisten-ai:profile";
 
 const el = (id) => document.getElementById(id);
 const ui = {
@@ -33,6 +34,7 @@ const ui = {
   continuousBtn: el("continuousBtn"),
   stopVoiceBtn: el("stopVoiceBtn"),
   repeatBtn: el("repeatBtn"),
+  profileBtn: el("profileBtn"),
   themeBtn: el("themeBtn"),
   newChatBtn: el("newChatBtn"),
   clearBtn: el("clearBtn"),
@@ -51,6 +53,7 @@ const state = {
   messages: readJSON(KEY_CURRENT, []),
   sessions: readJSON(KEY_SESSIONS, []),
   reminders: readJSON(KEY_REMINDERS, []),
+  profile: readJSON(KEY_PROFILE, { nama: "", aktivitas: "" }),
   prefs: prefsAwal,
   controller: null,
   busy: false,
@@ -522,6 +525,7 @@ async function kirimPesan(teks, opsi = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages: state.messages.map((m) => ({ role: m.role, content: m.content })),
+        profile: state.profile,
       }),
       signal: controller.signal,
     });
@@ -914,6 +918,16 @@ ui.repeatBtn.addEventListener("click", () => {
   if (state.lastAnswer) bicarakan(state.lastAnswer);
 });
 
+ui.profileBtn.addEventListener("click", () => {
+  const nama = window.prompt("Nama kamu (kosongkan kalau tidak mau disebut):", state.profile.nama || "");
+  if (nama === null) return;
+  const aktivitas = window.prompt("Jurusan atau aktivitas kamu, misalnya 'mahasiswa TI':", state.profile.aktivitas || "");
+  if (aktivitas === null) return;
+  state.profile = { nama: nama.trim().slice(0, 60), aktivitas: aktivitas.trim().slice(0, 60) };
+  writeJSON(KEY_PROFILE, state.profile);
+  showToast(state.profile.nama ? `Oke ${state.profile.nama}, profilnya tersimpan.` : "Profil tersimpan.");
+});
+
 ui.ttsBtn.addEventListener("click", () => {
   state.tts = !state.tts;
   ui.ttsBtn.setAttribute("aria-pressed", String(state.tts));
@@ -993,7 +1007,7 @@ async function init() {
   ui.continuousBtn.setAttribute("aria-pressed", String(state.continuous));
   ui.continuousBtn.querySelector("span").textContent = state.continuous ? "Ngobrol Terus aktif" : "Ngobrol Terus";
 
-  ui.greeting.textContent = sapaanWaktu() + "!";
+  ui.greeting.textContent = `${sapaanWaktu()}${state.profile.nama ? `, ${state.profile.nama}` : ""}!`;
   ui.greetingSub.textContent = "Aku asisten AI kamu. Ketik pesan atau tekan mikrofon untuk bicara.";
   muatUlangPesan();
   perbaruiPilihanRiwayat();
@@ -1005,7 +1019,7 @@ async function init() {
 
   // Sapaan otomatis: tampil di layar, tanpa masuk riwayat model.
   if (!state.messages.length) {
-    const sapaan = `${sapaanWaktu()}! Aku asisten AI kamu. Ada yang bisa kubantu hari ini?`;
+    const sapaan = `${sapaanWaktu()}${state.profile.nama ? `, ${state.profile.nama}` : ""}! Aku asisten AI kamu. Ada yang bisa kubantu hari ini?`;
     ui.messages.append(buatElemenPesan({ role: "assistant", content: sapaan, time: Date.now() }));
     ui.emptyState.hidden = true;
     setTimeout(() => bicarakan(sapaan), 500);
