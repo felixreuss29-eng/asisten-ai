@@ -237,10 +237,10 @@ Kalau koneksi ke model bermasalah, stream akan berisi `event: error` dengan pesa
 Repo sudah berisi `render.yaml`. Di Render:
 
 1. **New → Web Service** → pilih repo GitHub `asisten-ai`.
-2. Render akan mendeteksi `render.yaml` dan menyiapkan service `asisten-ai-backend`.
+2. Render akan mendeteksi `render.yaml` dan menyiapkan service `asisten-ai-felix`.
 3. Isi `LLM_API_KEY` di dashboard Render (Groq / OpenRouter). Jangan taruh di file.
 4. Setelah aktif, URL backend akan menjadi:
-   `https://asisten-ai-backend.onrender.com`
+   `https://asisten-ai-felix.onrender.com`
 5. `public/config.js` sudah otomatis memakai URL itu saat aplikasi dibuka dari `*.github.io`.
 
 > Frontend di GitHub Pages memanggil backend lintas domain, jadi server sudah menyertakan header CORS.
