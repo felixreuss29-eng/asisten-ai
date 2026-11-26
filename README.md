@@ -238,7 +238,8 @@ Repo sudah berisi `render.yaml`. Di Render:
 
 1. **New → Web Service** → pilih repo GitHub `asisten-ai`.
 2. Render akan mendeteksi `render.yaml` dan menyiapkan service `asisten-ai-felix`.
-3. Isi `LLM_API_KEY` di dashboard Render (Groq / OpenRouter). Jangan taruh di file.
+3. Isi `LLM_API_KEY` di dashboard Render dengan key OpenRouter (`sk-or-...`). Jangan taruh di file.
+   `render.yaml` sudah mengarah ke OpenRouter dengan model open-source gratis `google/gemma-4-31b-it:free` (mendukung tool calling). Kalau model gratis berubah, cek https://openrouter.ai/models?free=true lalu ubah `LLM_MODEL` di dashboard.
 4. Setelah aktif, URL backend akan menjadi:
    `https://asisten-ai-felix.onrender.com`
 5. `public/config.js` sudah otomatis memakai URL itu saat aplikasi dibuka dari `*.github.io`.
