@@ -600,7 +600,7 @@ function mapUpstreamError(status, text) {
     return `Model "${MODEL}" tidak ditemukan di ${BASE_URL}. Kalau pakai Ollama: jalankan "ollama pull ${MODEL}".`;
   }
   if (status === 429) {
-    return "Kuota atau batas permintaan provider habis (429). Tunggu sebentar atau ganti model/provider.";
+    return `Kuota atau batas permintaan provider habis (429). Tunggu sebentar atau ganti model/provider. Detail: ${isi}`;
   }
   return `Provider LLM merespons HTTP ${status}. ${isi}`.trim();
 }
