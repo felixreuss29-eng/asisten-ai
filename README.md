@@ -244,7 +244,7 @@ Vercel Hobby **tidak meminta kartu kredit** dan mendeteksi Express otomatis dari
    LLM_API_KEY = sk-or-...
    ```
 
-   Provider dan model sudah default ke OpenRouter gratis `google/gemma-4-31b-it:free`. SQLite otomatis ditaruh di `/tmp` karena filesystem Vercel read-only.
+   Provider dan model sudah default ke OpenRouter gratis `nvidia/nemotron-3.5-lightning:free`. SQLite otomatis ditaruh di `/tmp` karena filesystem Vercel read-only.
 4. Klik **Deploy**
 5. Buka URL Vercel hasil deploy — UI **dan** AI langsung jalan di satu domain.
 
@@ -258,7 +258,7 @@ Repo sudah berisi `render.yaml`. Di Render:
 1. **New → Web Service** → pilih repo GitHub `asisten-ai`.
 2. Render akan mendeteksi `render.yaml` dan menyiapkan service `asisten-ai-felix`.
 3. Isi `LLM_API_KEY` di dashboard Render dengan key OpenRouter (`sk-or-...`). Jangan taruh di file.
-   `render.yaml` sudah mengarah ke OpenRouter dengan model open-source gratis `google/gemma-4-31b-it:free` (mendukung tool calling). Kalau model gratis berubah, cek https://openrouter.ai/models?free=true lalu ubah `LLM_MODEL` di dashboard.
+   `render.yaml` sudah mengarah ke OpenRouter dengan model open-source gratis `nvidia/nemotron-3.5-lightning:free` (mendukung tool calling). Kalau model gratis berubah, cek https://openrouter.ai/models?free=true lalu ubah `LLM_MODEL` di dashboard.
 4. Setelah aktif, URL backend akan menjadi:
    `https://asisten-ai-felix.onrender.com`
 5. `public/config.js` sudah otomatis memakai URL itu saat aplikasi dibuka dari `*.github.io`.

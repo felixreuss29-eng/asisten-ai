@@ -25,7 +25,7 @@ const BASE_URL = String(
   process.env.LLM_BASE_URL || (IS_VERCEL ? "https://openrouter.ai/api/v1" : "http://localhost:11434/v1")
 ).replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "ollama";
-const MODEL = process.env.LLM_MODEL || (IS_VERCEL ? "google/gemma-4-31b-it:free" : "qwen2.5:7b-instruct");
+const MODEL = process.env.LLM_MODEL || (IS_VERCEL ? "nvidia/nemotron-3.5-lightning:free" : "qwen2.5:7b-instruct");
 const MAX_ROUNDS = 5; // batas putaran tool calling agar tidak loop tak berujung
 const MAX_MESSAGES = 16; // potong riwayat lama supaya muat di context window
 const MAX_CHARS = 4000;
