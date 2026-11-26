@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="description" content="Asisten AI pribadi berbasis suara dan teks dengan model open source." />
+    <title>Asisten AI Suara</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./config.js"></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <div class="brand-text">
+            <h1>Asisten AI</h1>
+            <p id="modelInfo">Menghubungkan ke model…</p>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button type="button" id="themeBtn" class="icon-btn" title="Ganti tema gelap/terang" aria-label="Ganti tema">🌙</button>
+          <button type="button" id="newChatBtn" class="ghost-btn" title="Mulai percakapan baru">Baru</button>
+          <button type="button" id="clearBtn" class="ghost-btn danger" title="Hapus semua riwayat">Hapus</button>
+          <button type="button" id="installBtn" class="ghost-btn" hidden>Install</button>
+          <label class="history-wrap" title="Muat percakapan sebelumnya">
+            <span class="sr-only">Pilih riwayat</span>
+            <select id="historySelect">
+              <option value="">Percakapan saat ini</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <div id="banner" class="banner" role="status" hidden></div>
+
+      <main class="chat-area" id="chatArea">
+        <section id="emptyState" class="empty-state">
+          <div class="orb" aria-hidden="true"><span>✦</span></div>
+          <h2 id="greeting">Halo!</h2>
+          <p id="greetingSub">Aku siap bantu. Ketik pesan atau tekan mikrofon untuk bicara.</p>
+          <div class="chips" id="chips">
+            <button type="button" class="chip" data-prompt="siapa kamu?">Siapa kamu?</button>
+            <button type="button" class="chip" data-prompt="catat tugas tes belajar besok pukul 09:00">Catat tugas</button>
+            <button type="button" class="chip" data-prompt="jam berapa sekarang?">Jam berapa?</button>
+            <button type="button" class="chip" data-prompt="hitung 125 * 8 + 17">Hitung</button>
+          </div>
+        </section>
+
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <div id="thinking" class="thinking" hidden>
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span>Sedang berpikir…</span>
+        </div>
+
+        <div id="actionsPanel" class="actions-panel" hidden aria-live="polite"></div>
+      </main>
+
+      <footer class="composer-wrap">
+        <div class="toggles">
+          <button type="button" id="ttsBtn" class="toggle" aria-pressed="true">🔊 <span>Suara menyala</span></button>
+          <button type="button" id="continuousBtn" class="toggle" aria-pressed="false">🔁 <span>Ngobrol Terus</span></button>
+          <button type="button" id="stopVoiceBtn" class="toggle danger" hidden>⏹ Berhenti bicara</button>
+        </div>
+
+        <form id="chatForm" class="composer">
+          <button type="button" id="micBtn" class="mic-btn" title="Tekan untuk bicara" aria-label="Mulai berbicara">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/>
+            </svg>
+          </button>
+          <textarea id="messageInput" rows="1" maxlength="4000" placeholder="Ketik pesan atau tekan mikrofon…" aria-label="Tulis pesan"></textarea>
+          <button type="submit" id="sendBtn" class="send-btn" title="Kirim pesan" aria-label="Kirim pesan">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M3 20l18-8L3 4v6l12 2-12 2v6Z"/></svg>
+          </button>
+          <button type="button" id="stopBtn" class="send-btn stop" title="Berhenti menjawab" aria-label="Berhenti menjawab" hidden>■</button>
+        </form>
+        <p class="hint">Enter untuk kirim · Shift + Enter untuk baris baru</p>
+      </footer>
+    </div>
+
+    <dialog id="confirmDialog" class="confirm-dialog">
+      <form method="dialog">
+        <h3>Konfirmasi aksi</h3>
+        <p id="confirmText">Yakin ingin melanjutkan?</p>
+        <p class="confirm-detail" id="confirmDetail"></p>
+        <div class="confirm-actions">
+          <button type="submit" value="batal" class="ghost-btn">Batal</button>
+          <button type="submit" value="setuju" class="primary-btn">Ya, lanjutkan</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>
