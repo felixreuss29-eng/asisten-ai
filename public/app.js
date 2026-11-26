@@ -43,17 +43,18 @@ const ui = {
   toast: el("toast"),
 };
 
+const prefsAwal = readJSON(KEY_PREFS, { theme: "dark", tts: true, continuous: false });
 const state = {
   messages: readJSON(KEY_CURRENT, []),
   sessions: readJSON(KEY_SESSIONS, []),
   reminders: readJSON(KEY_REMINDERS, []),
-  prefs: readJSON(KEY_PREFS, { theme: "dark", tts: true, continuous: false }),
+  prefs: prefsAwal,
   controller: null,
   busy: false,
   recognition: null,
   listening: false,
-  tts: state.prefs.tts !== false,
-  continuous: state.prefs.continuous === true,
+  tts: prefsAwal.tts !== false,
+  continuous: prefsAwal.continuous === true,
   speechUtter: null,
   toastTimer: null,
   reminderTimers: [],
