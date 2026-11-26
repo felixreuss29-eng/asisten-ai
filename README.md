@@ -232,7 +232,20 @@ Kalau koneksi ke model bermasalah, stream akan berisi `event: error` dengan pesa
 
 ## Deploy backend
 
-Contoh Render / Railway / Fly.io:
+### Deploy cepat dengan Render Blueprint
+
+Repo sudah berisi `render.yaml`. Di Render:
+
+1. **New → Web Service** → pilih repo GitHub `asisten-ai`.
+2. Render akan mendeteksi `render.yaml` dan menyiapkan service `asisten-ai-backend`.
+3. Isi `LLM_API_KEY` di dashboard Render (Groq / OpenRouter). Jangan taruh di file.
+4. Setelah aktif, URL backend akan menjadi:
+   `https://asisten-ai-backend.onrender.com`
+5. `public/config.js` sudah otomatis memakai URL itu saat aplikasi dibuka dari `*.github.io`.
+
+> Frontend di GitHub Pages memanggil backend lintas domain, jadi server sudah menyertakan header CORS.
+
+Contoh Render / Railway / Fly.io manual:
 
 1. Push folder proyek ke Git (jangan sertakan `.env` dan `data/`).
 2. Buat Web Service, set **Build Command**: `npm install`, **Start Command**: `npm start`.

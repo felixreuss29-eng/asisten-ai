@@ -811,6 +811,19 @@ function validateMessages(messages) {
 // ---------------------------------------------------------------------------
 const app = express();
 app.disable("x-powered-by");
+
+// Frontend bisa di-host di domain lain (GitHub Pages / APK), jadi izinkan CORS.
+// Tidak ada kredensial browser yang dikirim, aman untuk origin mana pun.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
+
 app.use(express.json({ limit: "256kb" }));
 
 app.get("/api/health", (_req, res) => {
