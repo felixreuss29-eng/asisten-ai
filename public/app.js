@@ -513,6 +513,9 @@ async function kirimPesan(teks, opsi = {}) {
     });
 
     if (!response.ok) {
+      if (response.status === 404 && !API_BASE && /github\.io$/i.test(location.hostname)) {
+        throw new Error("Backend belum terhubung. Isi apiBase di public/config.js dengan URL backend HTTPS dulu.");
+      }
       let payload = null;
       try { payload = await response.json(); } catch (_e) { /* abaikan */ }
       throw new Error((payload && payload.error) || "Server merespons HTTP " + response.status + ".");
@@ -910,7 +913,11 @@ async function cekKoneksi() {
   } catch (_error) {
     ui.modelInfo.textContent = "model belum jalan";
     ui.modelInfo.classList.add("offline");
-    showBanner("Belum bisa terhubung ke backend. Jalankan server dengan \"node server.js\" dan pastikan model open source sudah aktif.", true);
+    if (!API_BASE && /github\.io$/i.test(location.hostname)) {
+      showBanner("Ini baru tampilan web-nya. Isi apiBase di public/config.js dengan URL backend HTTPS agar AI bisa menjawab.", true);
+    } else {
+      showBanner("Belum bisa terhubung ke backend. Jalankan server dengan \"node server.js\" dan pastikan model open source sudah aktif.", true);
+    }
   }
 }
 
