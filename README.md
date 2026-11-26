@@ -232,7 +232,26 @@ Kalau koneksi ke model bermasalah, stream akan berisi `event: error` dengan pesa
 
 ## Deploy backend
 
-### Deploy cepat dengan Render Blueprint
+### Deploy gratis tanpa kartu — Vercel (disarankan)
+
+Vercel Hobby **tidak meminta kartu kredit** dan mendeteksi Express otomatis dari `server.js`. Frontend (`public/`) dan backend (`/api/*`) jalan di **satu URL yang sama**, jadi `apiBase` tidak perlu diubah.
+
+1. Buka https://vercel.com/new → **Import** repo `felixreuss29-eng/asisten-ai`
+2. Biarkan build settings default (Vercel mendeteksi Express)
+3. Di **Environment Variables**, tambahkan **hanya satu**:
+
+   ```text
+   LLM_API_KEY = sk-or-...
+   ```
+
+   Provider dan model sudah default ke OpenRouter gratis `google/gemma-4-31b-it:free`. SQLite otomatis ditaruh di `/tmp` karena filesystem Vercel read-only.
+4. Klik **Deploy**
+5. Buka URL Vercel hasil deploy — UI **dan** AI langsung jalan di satu domain.
+
+> Data di `/tmp` bersifat sementara, jadi tugas/catatan bisa reset saat function di-restart. Untuk uji publik tidak masalah.
+> GitHub Pages tetap bisa dipakai, tapi `public/config.js` perlu diisi URL Vercel supaya AI jalan dari sana.
+
+### Deploy dengan Render Blueprint (alternatif; perlu verifikasi kartu $1)
 
 Repo sudah berisi `render.yaml`. Di Render:
 

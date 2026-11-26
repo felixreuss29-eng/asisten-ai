@@ -19,9 +19,13 @@ const { DatabaseSync } = require("node:sqlite"); // SQLite bawaan Node >= 22.5
 // KONFIGURASI
 // ---------------------------------------------------------------------------
 const PORT = Number(process.env.PORT || 3000);
-const BASE_URL = String(process.env.LLM_BASE_URL || "http://localhost:11434/v1").replace(/\/+$/, "");
+// Saat di-deploy ke Vercel, default-nya OpenRouter gratis. Lokal tetap Ollama.
+const IS_VERCEL = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+const BASE_URL = String(
+  process.env.LLM_BASE_URL || (IS_VERCEL ? "https://openrouter.ai/api/v1" : "http://localhost:11434/v1")
+).replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "ollama";
-const MODEL = process.env.LLM_MODEL || "qwen2.5:7b-instruct";
+const MODEL = process.env.LLM_MODEL || (IS_VERCEL ? "google/gemma-4-31b-it:free" : "qwen2.5:7b-instruct");
 const MAX_ROUNDS = 5; // batas putaran tool calling agar tidak loop tak berujung
 const MAX_MESSAGES = 16; // potong riwayat lama supaya muat di context window
 const MAX_CHARS = 4000;
@@ -35,7 +39,8 @@ const SYSTEM_PROMPT =
 // ---------------------------------------------------------------------------
 // DATABASE SQLITE
 // ---------------------------------------------------------------------------
-const DB_FILE = path.resolve(process.env.SQLITE_FILE || "./data/asisten.db");
+// Vercel hanya mengizinkan tulis ke /tmp; filesystem lain bersifat read-only.
+const DB_FILE = path.resolve(process.env.SQLITE_FILE || (IS_VERCEL ? "/tmp/asisten.db" : "./data/asisten.db"));
 fs.mkdirSync(path.dirname(DB_FILE), { recursive: true });
 const db = new DatabaseSync(DB_FILE);
 db.exec(`
@@ -1003,12 +1008,23 @@ app.get(/^(?!\/api\/).*/, (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Asisten AI siap di http://localhost:${PORT}`);
-  console.log(`Model: ${MODEL}`);
-  console.log(`Provider: ${BASE_URL}`);
-  console.log(`Database: ${DB_FILE}`);
-  if (API_KEY === "ollama" && BASE_URL.includes("localhost")) {
-    console.log("Pastikan Ollama berjalan: ollama serve");
-  }
+// Error handler eksplisit supaya function Vercel bisa didaur ulang dengan aman.
+app.use((err, _req, res, _next) => {
+  console.error(err);
+  if (!res.headersSent) res.status(500).json({ error: "Terjadi kesalahan pada server." });
 });
+
+// Vercel mendeteksi Express melalui export app. Jangan buat listener saat di-import.
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Asisten AI siap di http://localhost:${PORT}`);
+    console.log(`Model: ${MODEL}`);
+    console.log(`Provider: ${BASE_URL}`);
+    console.log(`Database: ${DB_FILE}`);
+    if (API_KEY === "ollama" && BASE_URL.includes("localhost")) {
+      console.log("Pastikan Ollama berjalan: ollama serve");
+    }
+  });
+}
+
+module.exports = app;
