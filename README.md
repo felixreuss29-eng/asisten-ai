@@ -247,6 +247,8 @@ Vercel Hobby **tidak meminta kartu kredit** dan mendeteksi Express otomatis dari
    Provider dan model sudah default ke OpenRouter gratis `nvidia/nemotron-3.5-lightning:free`. SQLite otomatis ditaruh di `/tmp` karena filesystem Vercel read-only.
 4. Klik **Deploy**
 5. Buka URL Vercel hasil deploy — UI **dan** AI langsung jalan di satu domain.
+   Contoh deploy saat ini: `https://asisten-ai-smoky.vercel.app`
+   GitHub Pages: `https://felixreuss29-eng.github.io/asisten-ai/` (sudah diarahkan ke URL Vercel tersebut).
 
 > Data di `/tmp` bersifat sementara, jadi tugas/catatan bisa reset saat function di-restart. Untuk uji publik tidak masalah.
 > GitHub Pages tetap bisa dipakai, tapi `public/config.js` perlu diisi URL Vercel supaya AI jalan dari sana.
