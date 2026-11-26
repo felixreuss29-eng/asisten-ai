@@ -1,7 +1,7 @@
 /* Service Worker — menyimpan shell aplikasi agar bisa dipasang/dipakai offline.
    Permintaan /api/ sengaja TIDAK dicache supaya jawaban selalu dari model. */
 
-const CACHE = "asisten-ai-v2";
+const CACHE = "asisten-ai-v3";
 const SHELL = [
   "./",
   "./index.html",
