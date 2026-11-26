@@ -26,6 +26,13 @@ const BASE_URL = String(
 ).replace(/\/+$/, "");
 const API_KEY = process.env.LLM_API_KEY || "ollama";
 const MODEL = process.env.LLM_MODEL || (IS_VERCEL ? "nvidia/nemotron-3.5-lightning:free" : "qwen2.5:7b-instruct");
+// Model cadangan dipakai otomatis saat model utama kena 429/5xx.
+const FALLBACK_MODELS = String(
+  process.env.LLM_FALLBACK_MODELS || (IS_VERCEL ? "inclusionai/ling-3.2-flash:free,liquid/lfm-3-1.7b:free" : "")
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const MAX_ROUNDS = 5; // batas putaran tool calling agar tidak loop tak berujung
 const MAX_MESSAGES = 16; // potong riwayat lama supaya muat di context window
 const MAX_CHARS = 4000;
@@ -35,6 +42,19 @@ const SEARXNG_URL = String(process.env.SEARXNG_URL || "").replace(/\/+$/, "");
 
 const SYSTEM_PROMPT =
   "Kamu adalah asisten AI pribadi yang ramah, hangat, dan sigap. Sapa pengguna sesuai waktu (pagi/siang/sore/malam). Jawab dalam bahasa Indonesia kecuali pengguna memakai bahasa lain. Jawab singkat dan natural karena akan dibacakan dengan suara. Jika permintaan bisa dikerjakan dengan tool yang tersedia, langsung kerjakan lalu konfirmasi hasilnya. Jika tidak tahu, akui dengan jujur.";
+
+// Aturan gaya TAMBAHAN. PROMPT UTAMA DI ATAS TIDAK DIUBAH SAMA SEKALI.
+// Dikirim sebagai pesan system kedua agar kepribadiannya lebih manusiawi.
+const STYLE_PROMPT = [
+  "Aturan gaya tambahan (jangan mengganti identitas atau perintah di pesan sistem pertama):",
+  "- Jangan perkenalkan diri panjang lebar seperti 'Saya adalah asisten AI'. Jawab langsung saja, kecuali pengguna bertanya siapa kamu.",
+  "- Pakai diksi percakapan sehari-hari: iya, oke, sip, sudah ya, tunggu sebentar. Panggil pengguna 'kamu', sebut dirimu 'aku'.",
+  "- Maksimal dua atau tiga kalimat untuk jawaban biasa. Karena dibacakan, hindari daftar panjang, tabel, dan simbol yang aneh dibaca.",
+  "- Kalau perintah kurang jelas, misalnya tanggal atau deadline tidak disebut, tanya dulu dengan satu kalimat singkat sebelum memanggil tool.",
+  "- Kalau tool berhasil, cukup konfirmasi satu kalimat natural. Jangan menampilkan JSON, id, atau detail teknis kepada pengguna.",
+  "- Jangan mengulang sapaan di setiap balasan. Sapaan cukup di awal obrolan atau setelah jeda lama.",
+  "- Kalau tidak tahu, katakan sederhana: 'Aku belum tahu, mau aku cari?' lalu gunakan tool cari_web bila sesuai.",
+].join("\n");
 
 // ---------------------------------------------------------------------------
 // DATABASE SQLITE
@@ -639,9 +659,9 @@ async function readUpstreamSSE(response, onData) {
   }
 }
 
-async function callModel(messages, { send, signal, useTools = true }) {
+async function callModelOnce(model, messages, { send, signal, useTools = true }) {
   const payload = {
-    model: MODEL,
+    model,
     messages,
     temperature: 0.6,
     stream: true,
@@ -664,12 +684,16 @@ async function callModel(messages, { send, signal, useTools = true }) {
       signal: abortSignal,
     });
   } catch (error) {
-    throw new Error(networkError(error));
+    throw Object.assign(new Error(networkError(error)), { retryable: error?.name !== "AbortError" });
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(mapUpstreamError(response.status, text));
+    const status = response.status;
+    throw Object.assign(new Error(mapUpstreamError(status, text)), {
+      status,
+      retryable: status === 429 || status >= 500,
+    });
   }
 
   // Beberapa provider mengabaikan stream:true dan balas JSON biasa.
@@ -682,6 +706,7 @@ async function callModel(messages, { send, signal, useTools = true }) {
       send("token", { text: text.slice(i, i + 24) }); // tetap terasa streaming di UI
     }
     return {
+      model,
       text,
       toolCalls: (message.tool_calls || []).map((tc, i) => ({
         id: tc.id || `call_${i}`,
@@ -726,6 +751,7 @@ async function callModel(messages, { send, signal, useTools = true }) {
   });
 
   return {
+    model,
     text,
     toolCalls: [...calls.values()].map((c, i) => ({
       id: c.id || `call_${i}`,
@@ -736,14 +762,44 @@ async function callModel(messages, { send, signal, useTools = true }) {
   };
 }
 
+// Coba model utama, lalu model cadangan saat kena 429/5xx atau gangguan jaringan.
+// Tidak retry setelah token mulai dikirim supaya jawaban tidak dobel di layar.
+async function callModel(messages, opts) {
+  const daftar = [MODEL, ...FALLBACK_MODELS];
+  let terakhir = null;
+  let sudahBeritahu = false;
+  for (let i = 0; i < daftar.length; i += 1) {
+    let tokenDikirim = false;
+    const sendSekali = (event, data) => {
+      if (event === "token") tokenDikirim = true;
+      if (opts && opts.send) opts.send(event, data);
+    };
+    try {
+      return await callModelOnce(daftar[i], messages, { ...opts, send: sendSekali });
+    } catch (error) {
+      terakhir = error;
+      const masihAdaCadangan = i < daftar.length - 1;
+      if (!error.retryable || !masihAdaCadangan || tokenDikirim) break;
+      if (!sudahBeritahu && opts && opts.send) {
+        opts.send("notice", { message: `Model ${daftar[i]} sedang sibuk, aku coba model cadangan...` });
+        sudahBeritahu = true;
+      }
+    }
+  }
+  throw terakhir || new Error("Model tidak tersedia.");
+}
+
 function parseArgs(raw) {
   if (!raw) return {};
   if (typeof raw === "object") return raw;
   try { return JSON.parse(raw); } catch (_e) { return { __parse_error: String(raw).slice(0, 300) }; }
 }
 
-function systemMessage() {
-  return `${SYSTEM_PROMPT}\n\nInformasi saat ini: ${formatWIB()}. Gunakan informasi ini untuk menyapa sesuai waktu.`;
+function systemMessages() {
+  return [
+    { role: "system", content: `${SYSTEM_PROMPT}\n\nInformasi saat ini: ${formatWIB()}. Gunakan informasi ini untuk menyapa sesuai waktu.` },
+    { role: "system", content: STYLE_PROMPT },
+  ];
 }
 
 function toolResultMessage(id, name, payload) {
@@ -835,6 +891,7 @@ app.get("/api/health", (_req, res) => {
   res.json({
     ok: true,
     model: MODEL,
+    fallbackModels: FALLBACK_MODELS,
     baseUrl: BASE_URL,
     ready: true,
     tools: TOOLS.map((t) => t.function.name),
@@ -879,7 +936,7 @@ app.post("/api/chat", async (req, res) => {
       role: m.role,
       content: m.content.slice(0, MAX_CHARS),
     }));
-    const messages = [{ role: "system", content: systemMessage() }, ...riwayat];
+    const messages = [...systemMessages(), ...riwayat];
 
     send("meta", { model: MODEL, tools: TOOLS.length });
 
@@ -889,6 +946,10 @@ app.post("/api/chat", async (req, res) => {
       rounds += 1;
 
       const out = await callModel(messages, { send, signal: controller.signal, useTools: true });
+      // Kalau model cadangan yang dipakai, perbarui label di header browser.
+      if (out.model && out.model !== MODEL) {
+        send("meta", { model: out.model, tools: TOOLS.length, fallback: true });
+      }
       const adaTool = Array.isArray(out.toolCalls) && out.toolCalls.length > 0;
 
       if (!adaTool) {

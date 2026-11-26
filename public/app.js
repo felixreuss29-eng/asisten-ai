@@ -32,6 +32,7 @@ const ui = {
   ttsBtn: el("ttsBtn"),
   continuousBtn: el("continuousBtn"),
   stopVoiceBtn: el("stopVoiceBtn"),
+  repeatBtn: el("repeatBtn"),
   themeBtn: el("themeBtn"),
   newChatBtn: el("newChatBtn"),
   clearBtn: el("clearBtn"),
@@ -42,6 +43,8 @@ const ui = {
   confirmDetail: el("confirmDetail"),
   toast: el("toast"),
 };
+
+const PLACEHOLDER_INPUT = ui.input.placeholder;
 
 const prefsAwal = readJSON(KEY_PREFS, { theme: "dark", tts: true, continuous: false });
 const state = {
@@ -56,6 +59,8 @@ const state = {
   tts: prefsAwal.tts !== false,
   continuous: prefsAwal.continuous === true,
   speechUtter: null,
+  silenceTimer: null,
+  lastAnswer: "",
   toastTimer: null,
   reminderTimers: [],
   actionRows: new Map(),
@@ -331,6 +336,8 @@ function percakapanBaru() {
   }
   hentikanSemua();
   state.messages = [];
+  state.lastAnswer = "";
+  ui.repeatBtn.hidden = true;
   simpanSekarang();
   muatUlangPesan();
   ui.actionsPanel.innerHTML = "";
@@ -346,6 +353,8 @@ function hapusSemuaRiwayat() {
   hentikanSemua();
   state.messages = [];
   state.sessions = [];
+  state.lastAnswer = "";
+  ui.repeatBtn.hidden = true;
   state.reminders.forEach((r) => clearTimeout(r.timer));
   state.reminders = [];
   [KEY_CURRENT, KEY_SESSIONS, KEY_REMINDERS].forEach((k) => {
@@ -493,7 +502,11 @@ async function kirimPesan(teks, opsi = {}) {
       if (markdown) markdown.innerHTML = renderMarkdown(teksAI);
       pasangTombolSalin(elemenAI);
       simpanSekarang();
-      if (teksAI.trim()) bicarakan(teksAI);
+      if (teksAI.trim()) {
+        state.lastAnswer = teksAI;
+        ui.repeatBtn.hidden = false;
+        bicarakan(teksAI);
+      }
     }
 
     if (alasan === "need_confirm") {
@@ -681,6 +694,15 @@ function pulihkanPengingat() {
 // ---------------------------------------------------------------------------
 // BICARA & MENDENGAR
 // ---------------------------------------------------------------------------
+function pilihSuaraIndonesia() {
+  if (!("speechSynthesis" in window)) return null;
+  const daftar = window.speechSynthesis.getVoices();
+  return daftar.find((v) => /^id-ID$/i.test(v.lang)) ||
+    daftar.find((v) => /^id(-|_)/i.test(v.lang)) ||
+    daftar.find((v) => /indonesia/i.test(v.name)) ||
+    null;
+}
+
 function bicarakan(teks) {
   const bersih = bersihkanUntukSuara(teks);
   if (!state.tts || !bersih || !("speechSynthesis" in window)) {
@@ -693,10 +715,12 @@ function bicarakan(teks) {
     ucapan.lang = "id-ID";
     ucapan.rate = 1;
     ucapan.pitch = 1;
-    const suara = window.speechSynthesis.getVoices().find((v) => /^id(-|_)/i.test(v.lang)) ||
-      window.speechSynthesis.getVoices().find((v) => /indonesia/i.test(v.name));
+    const suara = pilihSuaraIndonesia();
     if (suara) ucapan.voice = suara;
     const selesaiBicara = () => {
+      // Kalau ucapan dibatalkan (barge-in / tombol berhenti), jangan nyalakan mic lagi.
+      if (state.speechUtter !== ucapan) return;
+      state.speechUtter = null;
       ui.stopVoiceBtn.hidden = true;
       if (state.continuous) setTimeout(mulaiMendengar, 300);
     };
@@ -712,8 +736,9 @@ function bicarakan(teks) {
 }
 
 function hentikanBicara() {
-  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  // Set dulu supaya onend dari ucapan yang dibatalkan tidak menyalakan mic lagi.
   state.speechUtter = null;
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
   ui.stopVoiceBtn.hidden = true;
 }
 
@@ -724,7 +749,16 @@ function mulaiMendengar() {
     return;
   }
   if (state.busy || state.listening) return;
+  // Barge-in: begitu mic menyala, suara AI langsung berhenti.
+  hentikanBicara();
   mintaIzinNotifikasi();
+
+  const bersihkanTimerDiam = () => {
+    if (state.silenceTimer) {
+      clearTimeout(state.silenceTimer);
+      state.silenceTimer = null;
+    }
+  };
 
   const rec = new SpeechRecognition();
   rec.lang = "id-ID";
@@ -747,14 +781,26 @@ function mulaiMendengar() {
       if (event.results[i].isFinal) final += teks;
       else sementara += teks;
     }
+    bersihkanTimerDiam();
     if (final) {
       ui.input.value = final;
+      ui.input.classList.remove("interim");
+      ui.input.placeholder = PLACEHOLDER_INPUT;
       autoSizeInput();
       rec.onend = null; // sudah ada hasil, jangan aktifkan mic lagi otomatis
       setTimeout(() => kirimPesan(final), 60);
     } else if (sementara) {
       ui.input.value = sementara;
+      ui.input.classList.add("interim");
+      ui.input.placeholder = "Mendengar…";
       autoSizeInput();
+      // Anggap selesai kalau tidak ada suara baru ±1,6 detik.
+      state.silenceTimer = setTimeout(() => {
+        state.silenceTimer = null;
+        if (state.recognition === rec && state.listening) {
+          try { rec.stop(); } catch (_e) { /* abaikan */ }
+        }
+      }, 1600);
     }
   };
 
@@ -770,9 +816,15 @@ function mulaiMendengar() {
   };
 
   rec.onend = () => {
+    if (state.silenceTimer) {
+      clearTimeout(state.silenceTimer);
+      state.silenceTimer = null;
+    }
     state.listening = false;
     ui.micBtn.classList.remove("listening");
     ui.micBtn.setAttribute("aria-label", "Mulai berbicara");
+    ui.input.classList.remove("interim");
+    ui.input.placeholder = PLACEHOLDER_INPUT;
     state.recognition = null;
   };
 
@@ -788,8 +840,14 @@ function hentikanMendengar() {
     state.recognition.onend = null;
     try { state.recognition.stop(); } catch (_e) { /* abaikan */ }
   }
+  if (state.silenceTimer) {
+    clearTimeout(state.silenceTimer);
+    state.silenceTimer = null;
+  }
   state.listening = false;
   ui.micBtn.classList.remove("listening");
+  ui.input.classList.remove("interim");
+  ui.input.placeholder = PLACEHOLDER_INPUT;
 }
 
 function hentikanSemua() {
@@ -852,6 +910,10 @@ ui.stopBtn.addEventListener("click", () => {
 
 ui.stopVoiceBtn.addEventListener("click", hentikanBicara);
 
+ui.repeatBtn.addEventListener("click", () => {
+  if (state.lastAnswer) bicarakan(state.lastAnswer);
+});
+
 ui.ttsBtn.addEventListener("click", () => {
   state.tts = !state.tts;
   ui.ttsBtn.setAttribute("aria-pressed", String(state.tts));
@@ -885,6 +947,8 @@ ui.historySelect.addEventListener("change", () => {
   hentikanSemua();
   const sesi = state.sessions.splice(index, 1)[0];
   state.messages = sesi.messages.slice();
+  state.lastAnswer = [...state.messages].reverse().find((m) => m.role === "assistant" && m.content && !m.error)?.content || "";
+  ui.repeatBtn.hidden = !state.lastAnswer;
   simpanSekarang();
   writeJSON(KEY_SESSIONS, state.sessions);
   muatUlangPesan();
@@ -933,6 +997,8 @@ async function init() {
   ui.greetingSub.textContent = "Aku asisten AI kamu. Ketik pesan atau tekan mikrofon untuk bicara.";
   muatUlangPesan();
   perbaruiPilihanRiwayat();
+  state.lastAnswer = [...state.messages].reverse().find((m) => m.role === "assistant" && m.content && !m.error)?.content || "";
+  ui.repeatBtn.hidden = !state.lastAnswer;
   autoSizeInput();
   cekKoneksi();
   pulihkanPengingat();
@@ -960,8 +1026,9 @@ async function init() {
   });
 
   if ("speechSynthesis" in window) {
-    // Paksa daftar suara termuat di beberapa browser.
+    // Paksa daftar suara termuat di beberapa browser, lalu pilih voice id-ID.
     window.speechSynthesis.getVoices();
+    window.speechSynthesis.addEventListener?.("voiceschanged", () => pilihSuaraIndonesia());
   }
 }
 

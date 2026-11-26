@@ -10,9 +10,9 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-    <link rel="stylesheet" href="./styles.css" />
-    <script src="./config.js?v=2"></script>
-    <script src="./app.js?v=2" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=3" />
+    <script src="./config.js?v=3"></script>
+    <script src="./app.js?v=3" defer></script>
   </head>
   <body>
     <div class="app-shell">
@@ -69,6 +69,7 @@
           <button type="button" id="ttsBtn" class="toggle" aria-pressed="true">🔊 <span>Suara menyala</span></button>
           <button type="button" id="continuousBtn" class="toggle" aria-pressed="false">🔁 <span>Ngobrol Terus</span></button>
           <button type="button" id="stopVoiceBtn" class="toggle danger" hidden>⏹ Berhenti bicara</button>
+          <button type="button" id="repeatBtn" class="toggle" hidden>↻ Ulangi jawaban</button>
         </div>
 
         <form id="chatForm" class="composer">
